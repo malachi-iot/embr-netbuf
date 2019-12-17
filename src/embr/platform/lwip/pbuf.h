@@ -87,11 +87,10 @@ public:
 // netbuf-mk2 managing a lwip pbuf
 // TODO: Extend from Pbuf, once I am in position to do regression
 // testing
-struct PbufNetbuf : PbufBase
+struct PbufNetbuf : Pbuf
 {
 
 private:
-    pbuf_pointer p;
 #ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
     pbuf_pointer p_start;
 #endif
@@ -103,19 +102,16 @@ public:
     typedef uint16_t size_type;
 #endif
 
-    PbufNetbuf(size_type size)
+    PbufNetbuf(size_type size) : Pbuf(size)
     {
-        p = pbuf_alloc(PBUF_TRANSPORT, size, PBUF_RAM);
-
 #ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
         p_start = p;
 #endif
     }
 
-    PbufNetbuf(pbuf_pointer p, bool bump_reference = true) : p(p)
+    PbufNetbuf(pbuf_pointer p, bool bump_reference = true) : 
+        Pbuf(p, bump_reference)
     {
-        if(bump_reference) pbuf_ref(p);
-
 #ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
         p_start = p;
 #endif
@@ -124,24 +120,21 @@ public:
     // FIX: Don't want to do reset here, but until seekoff gets sorted out,
     // we need this for testing
     PbufNetbuf(const PbufNetbuf& copy_from, bool reset, bool bump_reference = true) :
-        p(copy_from.p)
+        Pbuf(copy_from.p, bump_reference)
 #ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
         ,p_start(copy_from.p_start)
 #endif
     {
-        if(bump_reference) pbuf_ref(pbuf());
-
         if(reset) this->reset();
     }
 
 #ifdef FEATURE_CPP_MOVESEMANTIC
     PbufNetbuf(PbufNetbuf&& move_from) :
-        p(move_from.p)
+        Pbuf(std::move(move_from))
 #ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
         ,p_start(move_from.p_start)
 #endif
     {
-        move_from.p = NULLPTR;
 #ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
         move_from.p_start = NULLPTR;
 #endif
@@ -150,6 +143,7 @@ public:
 
     ~PbufNetbuf()
     {
+        p = pbuf();
         pbuf_pointer p_to_free = pbuf();
 
         if(p_to_free != NULLPTR)
