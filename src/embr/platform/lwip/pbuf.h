@@ -81,6 +81,12 @@ public:
             // deallocate pbuf memory
             pbuf_free(p_to_free);
     }
+
+    // p->len represents length of current pbuf, if a chain is involved
+    // look at tot_len
+    size_type size() const { return p->len; }
+
+    void* data() const { return p->payload; }
 };
 
 
@@ -143,13 +149,9 @@ public:
 
     ~PbufNetbuf()
     {
-        p = pbuf();
-        pbuf_pointer p_to_free = pbuf();
-
-        if(p_to_free != NULLPTR)
-            // remember, pbufs are reference counted so this may or may not actually
-            // deallocate pbuf memory
-            pbuf_free(p_to_free);
+#ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
+        p = p_start;
+#endif
     }
 
 #ifdef FEATURE_EMBR_PBUF_CHAIN_EXP
@@ -164,16 +166,10 @@ public:
 
     operator const_pbuf_pointer() const { return pbuf(); }
 
-    // p->len represents length of current pbuf, if a chain is involved
-    // look at tot_len
-    size_type size() const { return p->len; }
-
     size_type total_size() const 
     {
         return pbuf()->tot_len;
     }
-
-    void* data() const { return p->payload; }
 
     bool last() const
     {
